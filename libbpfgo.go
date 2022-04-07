@@ -636,14 +636,15 @@ func (b *BPFMap) GetValueBatch(keys unsafe.Pointer, startKey, nextKey unsafe.Poi
 		Flags:     C.BPF_ANY,
 	}
 
+	var err error
 	errC := C.bpf_map_lookup_batch(b.fd, startKey, nextKey, keys, valuesPtr, &countC, bpfMapBatchOptsToC(opts))
 	if errC != 0 {
-		return nil, fmt.Errorf("failed to batch lookup values %v in map %s: %w", keys, b.name, syscall.Errno(-errC))
+		err = fmt.Errorf("failed to batch lookup values %v in map %s: %w", keys, b.name, syscall.Errno(-errC))
 	}
 
 	parsedVals := collectBatchValues(values, count, b.ValueSize())
 
-	return parsedVals, nil
+	return parsedVals, err
 }
 
 // GetValueAndDeleteBatch allows for batch lookups of multiple keys and deletes those keys.
@@ -660,14 +661,15 @@ func (b *BPFMap) GetValueAndDeleteBatch(keys, startKey, nextKey unsafe.Pointer, 
 		Flags:     C.BPF_ANY,
 	}
 
+	var err error
 	errC := C.bpf_map_lookup_and_delete_batch(b.fd, startKey, nextKey, keys, valuesPtr, &countC, bpfMapBatchOptsToC(opts))
 	if errC != 0 {
-		return nil, fmt.Errorf("failed to batch lookup and delete values %v in map %s: %w", keys, b.name, syscall.Errno(-errC))
+		err = fmt.Errorf("failed to batch lookup and delete values %v in map %s: %w", keys, b.name, syscall.Errno(-errC))
 	}
 
 	parsedVals := collectBatchValues(values, count, b.ValueSize())
 
-	return parsedVals, nil
+	return parsedVals, err
 }
 
 func collectBatchValues(values []byte, count uint32, valueSize int) [][]byte {
@@ -688,11 +690,13 @@ func (b *BPFMap) UpdateBatch(keys, values unsafe.Pointer, count uint32) error {
 		ElemFlags: C.BPF_ANY,
 		Flags:     C.BPF_ANY,
 	}
+
+	var err error
 	errC := C.bpf_map_update_batch(b.fd, keys, values, &countC, bpfMapBatchOptsToC(&opts))
 	if errC != 0 {
-		return fmt.Errorf("failed to batch update map %s: %w", b.name, syscall.Errno(-errC))
+		err = fmt.Errorf("failed to batch update map %s: %w", b.name, syscall.Errno(-errC))
 	}
-	return nil
+	return err
 }
 
 // DeleteKeyBatch will delete `count` keys from the map, returning the keys deleted in the
@@ -704,11 +708,13 @@ func (b *BPFMap) DeleteKeyBatch(keys unsafe.Pointer, count uint32) error {
 		ElemFlags: C.BPF_ANY,
 		Flags:     C.BPF_ANY,
 	}
+
+	var err error
 	errC := C.bpf_map_delete_batch(b.fd, keys, &countC, bpfMapBatchOptsToC(opts))
 	if errC != 0 {
-		return fmt.Errorf("failed to batch delete key %d from map %s: %w", keys, b.name, syscall.Errno(-errC))
+		err = fmt.Errorf("failed to batch delete key %d from map %s: %w", keys, b.name, syscall.Errno(-errC))
 	}
-	return nil
+	return err
 }
 
 // DeleteKey takes a pointer to the key which is stored in the map.
