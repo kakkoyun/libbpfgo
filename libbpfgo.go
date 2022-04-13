@@ -666,10 +666,7 @@ func (b *BPFMap) GetValueAndDeleteBatch(keys, startKey, nextKey unsafe.Pointer, 
 	if errC != 0 {
 		call := syscall.Errno(-errC)
 		err = fmt.Errorf("failed to batch lookup and delete values %v in map %s: %w", keys, b.name, call)
-		// count – input and output parameter; on input it’s the number of elements in the map to read and delete in batch;
-		// on output it represents the number of elements that were successfully read and deleted.
-
-		if countC != count {
+		if uint32(countC) != count {
 			if call == syscall.EFAULT {
 				err = fmt.Errorf("up to %d keys were found in the keys might have deleted in map %s: %w", count, b.name, syscall.Errno(-errC))
 			} else {
@@ -678,14 +675,14 @@ func (b *BPFMap) GetValueAndDeleteBatch(keys, startKey, nextKey unsafe.Pointer, 
 		}
 	}
 
-	if countC > 0 {
-		return collectBatchValues(values, countC, b.ValueSize()), err
-	}
-
-	return nil, err
+	return collectBatchValues(values, uint32(countC), b.ValueSize()), err
 }
 
 func collectBatchValues(values []byte, count uint32, valueSize int) [][]byte {
+	if count > 0 {
+		return nil
+	}
+
 	var value []byte
 	var collected [][]byte
 	for i := 0; i < int(count*uint32(valueSize)); i += valueSize {
